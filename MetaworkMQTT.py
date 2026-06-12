@@ -4,6 +4,7 @@
 # https://uclab.esa.io/posts/8825 (privavte)
 
 
+import argparse
 import paho.mqtt.client as mqtt
 import json
 import time
@@ -11,13 +12,19 @@ import time
 TIMEOUT_HOUR = 1  # for More than 1 hour, we need to clear the device db.
 #client robots should update there info for each 30min.
 class MetaworkMQTT:
-    def __init__(self, host, port): #, username, password):
+    def __init__(self, host, port, wss=False): #, username, password):
         self.host = host
         self.port = port
         self.mod = False
 #        self.username = username
 #        self.password = password
-        self.client = mqtt.Client()
+        if wss:
+            self.client = mqtt.Client(
+                callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+                transport="websockets")
+            self.client.tls_set(cert_reqs=0)
+        else:
+            self.client = mqtt.Client()
 #        self.client.username_pw_set(username, password)
         self.client.connect(host, port, 60)
         
@@ -56,7 +63,7 @@ class MetaworkMQTT:
         data = json.loads(msg.payload)
         ver = data.get("version", "none")
 
-        if not "devId" in data:
+        if "devId" not in data:
             return
         
         if "device" in data:
@@ -97,7 +104,7 @@ class MetaworkMQTT:
 
     def unregister(self, msg):
         data = json.loads(msg.payload)
-        if not "devId" in data:
+        if "devId" not in data:
             return
         print("unregister:", data["devId"])
         # 同じIDのデバイスがあるかを確認
@@ -124,7 +131,7 @@ class MetaworkMQTT:
                     self.client.publish("dev/"+data["devId"], json.dumps(d))
                     self.pub_event({"event":"request", "from":data, "to":d, "date":time.ctime()})               
                     return
-        except:
+        except Exception :
             print("error in request",data)
         print("not found request ", data["type"])
         self.client.publish("dev/"+data["devId"], json.dumps({"devId": "none"}))
@@ -144,8 +151,15 @@ class MetaworkMQTT:
 
 
 if __name__ == "__main__":
-    host = "127.0.0.1"
-    port = 1883
+    parser = argparse.ArgumentParser(description='Metawork MQTT Manager')
+    parser.add_argument('--host', type=str, default='localhost', help='MQTT broker host (default: localhost)')
+    parser.add_argument('--port', type=int, default=1883, help='MQTT broker port (default: 1883)')
+    parser.add_argument('--wss', action='store_true', help='Use WSS (default: False)')
+    args = parser.parse_args()
+    port = args.port
+    if args.wss and port == 1883:
+        port = 8083
+    host = args.host
     mq = MetaworkMQTT(host, port)
     
     while True:
