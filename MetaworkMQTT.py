@@ -24,7 +24,9 @@ class MetaworkMQTT:
                 transport="websockets")
             self.client.tls_set(cert_reqs=0)
         else:
-            self.client = mqtt.Client()
+            self.client = mqtt.Client(
+                callback_api_version=mqtt.CallbackAPIVersion.VERSION2
+            )
 #        self.client.username_pw_set(username, password)
         self.client.connect(host, port, 60)
         
@@ -35,14 +37,14 @@ class MetaworkMQTT:
         
         self.client.loop_start()
         
-    def on_connect(self, client, userdata, flags, rc):
-        print("Connected with result code "+str(rc))
+    def on_connect(self, client, userdata, flags, reason_code, properties):
+        print("Connected with result code "+str(reason_code))
         client.subscribe("mgr/register")
         client.subscribe("mgr/unregister")
         client.subscribe("mgr/request")
 
     def on_message(self, client, userdata, msg):
-#        print(msg.topic+" "+str(msg.payload))
+        print("#### "+msg.topic+" "+str(msg.payload))
         if msg.topic == "mgr/register":
             self.update_status()
             self.register(msg)
@@ -133,8 +135,8 @@ class MetaworkMQTT:
                     return
         except Exception :
             print("error in request",data)
-        print("not found request ", data["type"])
-        self.client.publish("dev/"+data["devId"], json.dumps({"devId": "none"}))
+            print("not found request ", data["type"])
+            self.client.publish("dev/"+data["devId"], json.dumps({"devId": "none"}))
     
     def pub_status(self):
         self.client.publish("mgr/status", json.dumps(self.devices))
@@ -160,7 +162,7 @@ if __name__ == "__main__":
     if args.wss and port == 1883:
         port = 8083
     host = args.host
-    mq = MetaworkMQTT(host, port)
+    mq = MetaworkMQTT(host, port, args.wss)
     
     while True:
         time.sleep(1)
