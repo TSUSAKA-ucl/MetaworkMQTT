@@ -1,17 +1,19 @@
 "use client";
+// このファイルの名前は"metaworkMqttClient.ts"です
 // modified by Gemini
-import mqtt from 'mqtt';
+import mqtt, { MqttClient } from 'mqtt';
 import { userUUID } from './cookie_id';
 
-let mqttclient = null;
+// ハンドラーの型定義
+type MessageHandler = (payload: any) => void;
+
+let mqttclient: MqttClient | null = null;
 // トピックごとのハンドラー管理（Set を使うことで重複登録を防止）
-const topicHandlerMap = new Map();
+const topicHandlerMap = new Map<string, Set<MessageHandler>>();
 
 // メッセージ受信時の共通ハンドラー
-const handleMessage = (topic, message) => {
-  // console.warn('receive msg:',topic);
-  // console.warn('body:', message.toString());
-  let payload;
+const handleMessage = (topic: string, message: Buffer): void => {
+  let payload: any;
   try {
     payload = JSON.parse(message.toString());
   } catch (e) {
@@ -21,17 +23,25 @@ const handleMessage = (topic, message) => {
 
   // 完全一致でのハンドラー実行（※ワイルドカード対応が必要な場合は mqtt-match ライブラリ等の導入を推奨）
   const handlers = topicHandlerMap.get(topic);
-  // console.warn('handleMessage handlers:',handlers);
-  // console.warn('handleMessage payload:',payload);
   if (handlers) {
     handlers.forEach(handler => handler(payload));
   }
 };
 
+// 登録情報のインターフェース定義
+interface RegistrationInfo {
+  devType?: string;
+  codeType?: string;
+  version?: string;
+}
+
 // on-demand connect. 既にclientが存在する場合は何もせず、存在しない場合のみ接続する
-export const connect = (registrationInfo = null, broker_url = null) => {
+export const connect = (
+  registrationInfo: RegistrationInfo | null = null,
+  broker_url: string | null = null
+): void => {
   if (mqttclient == null) {
-    const url = broker_url || `wss://${window.location.hostname}:8333`;
+    const url = broker_url || `wss://${window.location.hostname}:8888`;
     
     // クライアント生成
     const client = mqtt.connect(url, {
@@ -62,7 +72,7 @@ export const connect = (registrationInfo = null, broker_url = null) => {
       client.publish('mgr/register', JSON.stringify(info));
     });
 
-    client.on('error', function (err) {
+    client.on('error', function (err: Error) {
       console.error('Metawork MQTT Connection error: ', err);
     });
 
@@ -72,8 +82,7 @@ export const connect = (registrationInfo = null, broker_url = null) => {
 };
 
 // 安全に購読し、解除用関数（unsubscribe）を返すように変更
-export const subscribe = (topic, handler) => {
-  // console.warn('register subscriber:',topic);
+export const subscribe = (topic: string, handler: MessageHandler): () => void => {
   if (mqttclient == null) {
     console.error('Metawork MQTT client not connected!');
     return () => {};
@@ -81,12 +90,12 @@ export const subscribe = (topic, handler) => {
 
   // Set を使って同一ハンドラーの重複登録を防ぐ
   if (!topicHandlerMap.has(topic)) {
-    topicHandlerMap.set(topic, new Set());
+    topicHandlerMap.set(topic, new Set<MessageHandler>());
   }
-  const handlers = topicHandlerMap.get(topic);
+  const handlers = topicHandlerMap.get(topic)!;
   handlers.add(handler);
 
-  // 実際の MQTT Subscribe（すでに購読済みのトピックならブローカーへの送信はスキップしても良いが、MQTT.jsが内部で最適化してくれます）
+  // 実際の MQTT Subscribe
   mqttclient.subscribe(topic, { noLocal: true }, (err, granted) => {
     if (!err) {
       console.log('Metawork MQTT Subscribe topics', topic, granted);
@@ -111,7 +120,7 @@ export const subscribe = (topic, handler) => {
   };
 };
 
-export const publish = (topic, msg, qos = 0) => {
+export const publish = (topic: string, msg: string | Buffer, qos: 0 | 1 | 2 = 0): void => {
   if (mqttclient == null) {
     console.error('Metawork MQTT client not connected!');
     return;
@@ -119,7 +128,7 @@ export const publish = (topic, msg, qos = 0) => {
   mqttclient.publish(topic, msg, { qos: qos });
 };
 
-export const end = () => {
+export const end = (): void => {
   if (mqttclient != null) {
     // 引数に true を渡して強制かつ即座に終了、イベントリスナーも内部で全削除される
     mqttclient.end(true); 
