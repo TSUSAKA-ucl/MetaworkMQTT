@@ -40,16 +40,25 @@ class MetaworkMQTT:
         client.subscribe("mgr/unregister")
         client.subscribe("mgr/request")
 
+    # register/unregister/request共にpayloadをjsonとして解釈するためここでjson.loadsする
     def on_message(self, client, userdata, msg):
-        print("#### "+msg.topic+" "+str(msg.payload))
+        try:
+            data = json.loads(msg.payload)
+        except json.JSONDecodeError:
+            print("Invalid JSON in message on topic:", msg.topic, file=sys.stderr)
+            return
+        ## msg.payloadはそのままprintすると横に長過ぎるのでpretty printする
+        # print("#### "+msg.topic+" "+str(msg.payload))
+        print("#### "+msg.topic+" "+json.dumps(data, indent=2), flush=True)
+
         if msg.topic == "mgr/register":
             self.update_status()
-            self.register(msg)
+            self.register(data)
         elif msg.topic == "mgr/unregister":    
             self.update_status()
-            self.unregister(msg)
+            self.unregister(data)
         elif msg.topic == "mgr/request":    
-            self.request(msg)
+            self.request(data)
         
     # we need to flush obsolute devices after TIMEOUT_HOUR
     def update_status(self):
@@ -65,13 +74,7 @@ class MetaworkMQTT:
                     valid_devices.append(d)
             self.devices = valid_devices
             
-    def register(self, msg):
-        try:
-            data = json.loads(msg.payload)
-        except json.JSONDecodeError:
-            print("Invalid JSON in register")
-            return
-
+    def register(self, data):
         ver = data.get("version", "none")
 
         if "devId" not in data:
@@ -102,13 +105,7 @@ class MetaworkMQTT:
             })
             self.mod = True
 
-    def unregister(self, msg):
-        try:
-            data = json.loads(msg.payload)
-        except json.JSONDecodeError:
-            print("Invalid JSON in unregister")
-            return
-
+    def unregister(self, data):
         if "devId" not in data:
             return
         print("unregister:", data["devId"]) # スパイク負荷は無いとして残す
@@ -124,12 +121,7 @@ class MetaworkMQTT:
         # self.client.publish("mgr/register", json.dumps(data))
 
     # 希望するタイプのデバイスがあるかを確認
-    def request(self, msg):
-        try:
-            data = json.loads(msg.payload)
-        except json.JSONDecodeError:
-            return
-
+    def request(self, data):
         # giant lockを避けるためスナップショットを作成
         with self._lock:
             rev_list = self.devices[::-1]
@@ -147,7 +139,7 @@ class MetaworkMQTT:
             print("not found request ", data["type"])
             self.client.publish("dev/"+data["devId"], json.dumps({"devId": "none"}))
         except Exception as e:
-            print(f"error in request {data}: {e}")
+            print(f"error in request {data}: {e}", flush=True, file=sys.stderr)
     
     def get_devices_snapshot(self):
         """安全に現在のデバイスリストのコピーを取得する（ロック時間を極小化）"""
@@ -165,7 +157,7 @@ class MetaworkMQTT:
     def print_devices_snapshot(self, snapshot):
         """ロックの外で安全にプリント処理を行う"""
         for i, r in enumerate(snapshot):
-            print(i, r)
+            print(i, json.dumps(r,indent=2), flush=True)
 
 
 if __name__ == "__main__":
