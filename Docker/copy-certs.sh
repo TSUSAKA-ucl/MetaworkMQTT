@@ -16,9 +16,9 @@ if [ $KeyFileCount -eq 1 ]; then
     CertFileName=$(echo "$KeyFile" | sed 's/-key\.pem$/.pem/')
     if [ -f "$CertFileName" ]; then
 	# cd "$DestDir"
-	echo cp -p "$SrcDir/$CertFileName" "$DestDir/localhost.pem"
-	echo cp -p "$SrcDir/$KeyFile" "$DestDir/localhost-key.pem"
-	echo chmod 600 "$DestDir/localhost.pem" "$DestDir/localhost-key.pem"
+	cp -p "$SrcDir/$CertFileName" "$DestDir/localhost.pem"
+	cp -p "$SrcDir/$KeyFile" "$DestDir/localhost-key.pem"
+	chmod 600 "$DestDir/localhost.pem" "$DestDir/localhost-key.pem"
 	echo "Copy cert and key files to $DestDir"
 	exit 0
     else
