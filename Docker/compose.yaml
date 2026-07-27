@@ -97,6 +97,7 @@ services:
     # user: "${UID:-1000}:${GID:-1000}" mountを使用するためroot
     environment:
       - NEXT_PKG=${NEXT_PKG:-.}
+      - GITHUB_PKG_READ_TOKEN=${GITHUB_PKG_READ_TOKEN:-}
       - WATCHPACK_POLLING=true
       - pnpm_config_block_exotic_subdeps=false
       - pnpm_config_minimum_release_age=0

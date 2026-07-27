@@ -6,6 +6,14 @@ if [ "$UID" != `id -u` ]; then
     export UID=$(id -u)
 fi
 export GID=$(id -g)
+##### npmパッケージのdev serverをcomposeで動かす場合の注意 ####
+# 各npmパッケージで@ucl-nueeのpackageのreadが必要な場合は
+# GITHUB_PKG_READ_TOKEN環境変数にPATが入っていることとする
+# 各npmパッケージ下の.npmrcに、PATの変わりに${GITHUB_PKG_READ_TOKEN}を
+# 書いておくこと!
+if [ "$GITHUB_PKG_READ_TOKEN" = "" ]
+then export GITHUB_PKG_READ_TOKEN=`sed -e 's|^//npm.pkg.github.com/:_authToken=\([a-zA-Z0-9_]\+\)|\1|;t;d' ~/.npmrc`
+fi
 
 # $1が存在すればそこをNext.jsのパッケージルートとマウントポイントとNEXT_PKG環境変数にセットする
 if [ "$1" != "" ] && [ -d "$1" ]; then
