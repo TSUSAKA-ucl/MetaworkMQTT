@@ -12,10 +12,10 @@ mkdir -p /mnt/rw_storage/upper /mnt/rw_storage/work /app
 mount -t overlay overlay \
       -o lowerdir=/mnt/ro_base,upperdir=/mnt/rw_storage/upper,workdir=/mnt/rw_storage/work \
       /app
-# echo '##########'
-# ls -l /app
-# echo '##########'
-cd /app
+cd /app/"$NEXT_PKG"
+echo '##########'
+pwd -P
+echo '##########'
 # 2. 本来実行したいコマンドに処理を引き継ぐ
 # 引数（CMD）が指定されていない場合はデフォルトで sh を起動
 if [ $# -eq 0 ]; then
@@ -23,4 +23,3 @@ if [ $# -eq 0 ]; then
 else
   exec "$@"
 fi
-b

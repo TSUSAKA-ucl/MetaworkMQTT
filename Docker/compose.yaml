@@ -83,7 +83,7 @@ services:
       - "5173:5173"
     volumes:
       - ./entrypoint-for-pnpm.sh:/entrypoint-for-pnpm.sh:ro
-      - ${NEXT_PKG:-..}:/mnt/ro_base:ro
+      - ${PNPM_WORKSPACE:-..}:/mnt/ro_base:ro
       - type: tmpfs
         target: /mnt/rw_storage
       # - dev-server-node-modules:/app/node_modules
@@ -96,6 +96,7 @@ services:
     command: sh -c "corepack enable pnpm && pnpm install --no-frozen-lockfile && ${NpmCmd:-pnpm} ${DevCmd:-dev}"
     # user: "${UID:-1000}:${GID:-1000}" mountを使用するためroot
     environment:
+      - NEXT_PKG=${NEXT_PKG:-.}
       - WATCHPACK_POLLING=true
       - pnpm_config_block_exotic_subdeps=false
       - pnpm_config_minimum_release_age=0
