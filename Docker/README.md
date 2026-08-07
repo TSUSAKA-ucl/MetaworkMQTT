@@ -8,8 +8,10 @@ mosquitto,manager(`MetaworkMQTT.py`)とdevサーバーがcomposeで立ち上が�
 
 * `./up.sh`の様に引数なしで呼ぶと、mosquittoとmanager(`MetaworkMQTT.py`)だけ立ち上げる。
 * `./MetaworkMQTT/Docker/up.sh .`のように引数をつけ、第一引数がディレクトリだと
-  そこをnpmパッケージのルートと見なして、mosquitto,managerに加えてdevサーバーを立ち上げる。
-  (`pnpm dev`)
+  そこをnpmパッケージのルートと見なして、mosquitto,managerに加えてdevサーバー(
+  デフォルトは`pnpm dev`)を立ち上げる。第二引数が有る場合は、第一引数がマウントポイント
+  第二引数がマウントポイントからの(パッケージルートの)相対パスとする。モノレポ(pnpm
+  workspace)対応のため。
 * `./up.sh ${PathToPackage}`のようにdevサーバを立ち上げたときは、`./down.sh ${PathToPackage}`
   のように`down.sh`も引数付きで呼ばないとdevサーバーのコンテナだけ残る。
 * 独自CA等でホストのcertとkeyがあれば、`~/.local/share/ssl/`に置くか、SANに拘らず
