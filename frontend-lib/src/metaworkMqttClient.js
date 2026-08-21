@@ -1,7 +1,9 @@
 "use client";
 // modified by Gemini
 import mqtt from 'mqtt';
-import { userUUID } from './cookie_id';
+// import { userUUID } from './cookie_id';
+import { getTabUuid } from './tab_id.js'
+// const userUUID = getTabUuid(); // Next.jsの場合は注意!!
 
 let mqttclient = null;
 // トピックごとのハンドラー管理（Set を使うことで重複登録を防止）
@@ -48,6 +50,7 @@ export const connect = (registrationInfo = null, broker_url = null) => {
       const codeType = registrationInfo?.codeType || "unknown";
       const version = registrationInfo?.version || "unknown";
       
+      const userUUID = getTabUuid(); // Next.js SSR対応
       const info = {
         date: date.toLocaleString(),
         device: {
