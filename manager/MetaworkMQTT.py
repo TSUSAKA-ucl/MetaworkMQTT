@@ -2,6 +2,7 @@ import argparse
 import paho.mqtt.client as mqtt
 import json
 import time
+from datetime import datetime,timezone
 import threading  # スレッドロックのために追加
 
 TIMEOUT_HOUR = 1  # for More than 1 hour, we need to clear the device db.
@@ -132,7 +133,9 @@ class MetaworkMQTT:
                     # requestはブラウザごとなのでスパイク負荷の確率は低くprintを残す
                     print("Request found",d) # 本当は、現在使われているか、オーバライドか、などの情報を保持すべき
                     self.client.publish("dev/"+data["devId"], json.dumps(d))
-                    self.pub_event({"event":"request", "from":data, "to":d, "date":time.ctime()})                
+                    self.pub_event({"event":"request", "from":data, "to":d,
+                                    # "date":time.ctime()})
+                                    "date":datetime.now(timezone.utc).isoformat()})
                     return
             
             # ループを抜けても見つからなかった場合（インデントを修正し try ブロック内に配置）

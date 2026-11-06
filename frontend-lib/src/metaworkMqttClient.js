@@ -35,9 +35,19 @@ export const connect = (registrationInfo = null, broker_url = null) => {
   if (mqttclient == null) {
     const url = broker_url || `wss://${window.location.hostname}:8333`;
     
+    // connectするときにunregisterのwillを仕掛けておく
+    const willPayload = JSON.stringify({ devId: getTabUuid() });
     // クライアント生成
     const client = mqtt.connect(url, {
       protocolVersion: 5,
+      keepalive: 20,
+      clientId: `metawork-${getTabUuid()}`,
+      will: {
+	topic: 'mgr/unregister',
+	payload: willPayload,
+	qos: 1,
+	retain: true
+      }
     });
 
     // message ハンドラーは接続イベントの外側で、生成時に1度だけ登録する（最重要）
@@ -52,7 +62,7 @@ export const connect = (registrationInfo = null, broker_url = null) => {
       
       const userUUID = getTabUuid(); // Next.js SSR対応
       const info = {
-        date: date.toLocaleString(),
+        date: date.toISOString(),
         device: {
           agent: navigator.userAgent,
           cookie: navigator.cookieEnabled
